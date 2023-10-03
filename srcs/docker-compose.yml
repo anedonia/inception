@@ -1,0 +1,71 @@
+version: '3'
+services:
+  nginx:
+    build: ./requirements/nginx
+    image: nginx
+    container_name: nginx
+    depends_on:
+      - wordpress
+    ports:
+      - "443:443"
+    volumes:
+      - wp_volume:/var/www/html
+    restart: always
+    networks:
+      - inception
+
+###########
+  wordpress:
+    build: ./requirements/wordpress
+    image: wordpress
+    container_name: wordpress
+    depends_on:
+      - mariadb
+    env_file:
+      - .env
+    volumes:
+      - wp_volume:/var/www/html
+    restart: always
+    networks:
+      - inception
+
+  mariadb:
+    container_name: mariadb
+    build: ./requirements/mariadb
+    #volumes allow to store in a persistent disk the content in a local disk
+    #db_data is a volume created by docker directly
+    volumes:
+      - db_volume:/var/lib/mysql
+    # in case of problem we restart automatically the container
+    networks:
+      - inception
+    restart: always
+    env_file:
+      - .env
+
+###########
+
+volumes:
+  db_volume:
+    # volumes are created on Docker host machine
+    driver: local
+    driver_opts:
+      # no special partition in the host machine
+      type: none
+      # where in the host machine
+      device: /home/${USER}/data/mariadb
+      # bind mount, because is a special path outside volume docker area, can access from host machine
+      o: bind
+  wp_volume:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/${USER}/data/wordpress
+      o: bind
+
+###########
+
+networks:
+  inception:
+    name: inception-network
+    driver: bridge
